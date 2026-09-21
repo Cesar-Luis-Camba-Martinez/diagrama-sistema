@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor Diagrama Entidad-Relación - Sistema Académico</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Mermaid JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+
+    <!-- SVG Pan Zoom CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+
+    <style>
+        /* Estilos de alto contraste para forzar la visibilidad del diagrama Mermaid */
+        #er-svg {
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 500px;
+        }
+
+        /* Estilos para las cajas de entidades (Tablas) */
+        #er-svg .entityBox {
+            fill: #1e293b !important;
+            stroke: #38bdf8 !important;
+            stroke-width: 2px !important;
+            rx: 6px !important;
+            ry: 6px !important;
+        }
+
+        /* Títulos de las tablas */
+        #er-svg .entityLabel, 
+        #er-svg g.entityGroup text.entityLabel {
+            fill: #ffffff !important;
+            font-family: system-ui, -apple-system, sans-serif !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+        }
+
+        /* Filas de atributos (impares y pares) */
+        #er-svg .attributeBoxOdd {
+            fill: #0f172a !important;
+            stroke: #334155 !important;
+        }
+
+        #er-svg .attributeBoxEven {
+            fill: #1e293b !important;
+            stroke: #334155 !important;
+        }
+
+        /* Textos dentro de las tablas (Nombres de campos y tipos de datos) */
+        #er-svg text, 
+        #er-svg tspan, 
+        #er-svg .attribute-type, 
+        #er-svg .attribute-name {
+            fill: #f1f5f9 !important;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+            font-size: 12px !important;
+            opacity: 1 !important;
+        }
+
+        /* Claves primarias (PK) y foráneas (FK) */
+        #er-svg text[title*="PK"], 
+        #er-svg text[title*="FK"],
+        #er-svg .pk-color,
+        #er-svg .fk-color {
+            fill: #38bdf8 !important;
+            font-weight: bold !important;
+        }
+
+        /* Líneas de relación entre tablas */
+        #er-svg .er.relationshipLine {
+            stroke: #38bdf8 !important;
+            stroke-width: 2px !important;
+            stroke-dasharray: none !important;
+        }
+
+        /* Etiquetas de las relaciones */
+        #er-svg .er.relationshipLabel {
+            fill: #7dd3fc !important;
+            font-family: system-ui, -apple-system, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+        }
+
+        #er-svg .er.relationshipLabelBox {
+            fill: #0f172a !important;
+            stroke: #0284c7 !important;
+            stroke-width: 1px !important;
+            rx: 4px !important;
+            ry: 4px !important;
+            opacity: 0.95 !important;
+        }
+
+        /* Scrollbar personalizado para el menú lateral */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col font-sans overflow-hidden">
+
+    <!-- Header Navigation -->
+    <header class="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur px-3 md:px-6 flex items-center justify-between shrink-0 z-20 gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="p-2 bg-brand-600/20 text-brand-400 rounded-lg border border-brand-500/30 shrink-0">
+                <i data-lucide="database" class="w-5 h-5 md:w-6 md:h-6"></i>
+            </div>
+            <div class="truncate">
+                <h1 class="font-bold text-sm md:text-base leading-tight text-slate-100 truncate">Diagrama Entidad-Relación</h1>
+                <p class="text-[11px] md:text-xs text-slate-400 truncate">Sistema de Gestión Académica</p>
+            </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex items-center gap-1.5 md:gap-3 shrink-0">
+            <!-- Zoom Controls -->
+            <div class="flex items-center bg-slate-800/90 rounded-lg p-1 border border-slate-700/60 shadow-sm">
+                <button id="btn-zoom-in" title="Acercar (+)" class="p-1.5 md:p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition">
+                    <i data-lucide="zoom-in" class="w-4 h-4"></i>
+                </button>
+                <button id="btn-zoom-out" title="Alejar (-)" class="p-1.5 md:p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition">
+                    <i data-lucide="zoom-out" class="w-4 h-4"></i>
+                </button>
+                <button id="btn-zoom-reset" title="Restablecer Vista" class="p-1.5 md:p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition">
+                    <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="h-5 w-px bg-slate-800 hidden md:block"></div>
+
+            <!-- Export Button -->
+            <button id="btn-export-svg" title="Exportar como SVG" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-lg transition shadow-sm">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span class="hidden md:inline">Exportar</span> SVG
+            </button>
+
+            <!-- Sidebar Toggle (Mobile) -->
+            <button id="btn-toggle-sidebar" class="md:hidden p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg hover:text-white">
+                <i data-lucide="panel-left" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex relative overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-72 md:w-80 border-r border-slate-800 bg-slate-900/95 flex flex-col shrink-0 z-30 transition-transform duration-300 absolute md:relative inset-y-0 left-0 -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
+            <!-- Sidebar Header / Search -->
+            <div class="p-3 md:p-4 border-b border-slate-800 flex flex-col gap-2">
+                <div class="flex justify-between items-center md:hidden">
+                    <span class="text-xs font-semibold text-slate-400">Entidades e Índices</span>
+                    <button id="btn-close-sidebar" class="text-slate-400 hover:text-white">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="table-search" placeholder="Buscar tabla o entidad..." 
+                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+            </div>
+
+            <!-- Entity Category List -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-3" id="categories-container">
+                <!-- Se poblará dinámicamente -->
+            </div>
+
+            <!-- Footer Stats -->
+            <div class="p-3 border-t border-slate-800 bg-slate-900/80 text-xs text-slate-400 flex justify-between items-center">
+                <span>Total Tablas: <strong class="text-brand-400" id="total-entities">0</strong></span>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Mermaid JS</span>
+            </div>
+        </aside>
+
+        <!-- Canvas Area -->
+        <main class="flex-1 bg-slate-950 relative flex items-center justify-center overflow-hidden">
+            <!-- Grid pattern background -->
+            <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:28px_28px] opacity-40 pointer-events-none"></div>
+
+            <!-- Loader Indicator -->
+            <div id="loader" class="absolute flex flex-col items-center gap-3 text-slate-300 z-10 bg-slate-900/80 p-6 rounded-xl border border-slate-800 backdrop-blur shadow-2xl">
+                <i data-lucide="loader-2" class="w-8 h-8 animate-spin text-brand-400"></i>
+                <span class="text-xs font-medium text-slate-300">Generando diagrama relacional...</span>
+            </div>
+
+            <!-- Diagram Canvas -->
+            <div id="diagram-wrapper" class="w-full h-full opacity-0 transition-opacity duration-500 cursor-grab active:cursor-grabbing">
+                <div id="mermaid-target" class="w-full h-full flex items-center justify-center p-2"></div>
+            </div>
+
+            <!-- Instructions Overlay -->
+            <div class="absolute bottom-3 right-3 bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-[11px] text-slate-400 flex items-center gap-2.5 shadow-lg pointer-events-none">
+                <span class="flex items-center gap-1"><i data-lucide="move" class="w-3.5 h-3.5 text-brand-400"></i> Arrastrar</span>
+                <span class="w-px h-3 bg-slate-700"></span>
+                <span class="flex items-center gap-1"><i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-brand-400"></i> Zoom</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script de Definición Mermaid -->
+    <script type="text/mermaid" id="mermaid-code">
+erDiagram
+    INSTITUCION {
+        int id_institucion PK
+        varchar nombre
+        varchar codigo_dane
+    }
+    
+    SEDE {
+        int id_sede PK
+        varchar nombre
+        varchar direccion
+        int id_institucion FK
+        int id_municipio FK
+    }
+    
+    JORNADA {
+        int id_jornada PK
+        varchar nombre
+    }
+    
+    GRADO {
+        int id_grado PK
+        varchar nombre
+    }
+    
+    GRUPO {
+        int id_grupo PK
+        varchar nombre
+        int id_grado FK
+        int id_sede FK
+        int id_jornada FK
+    }
+    
+    ESTUDIANTE {
+        int id_estudiante PK
+        varchar nombres
+        varchar apellidos
+        varchar documento_identidad
+        date fecha_nacimiento
+        varchar tipo_documento
+        varchar telefono
+        varchar correo_electronico
+        varchar direccion
+        int id_municipio FK
+    }
+    
+    DOCENTE {
+        int id_docente PK
+        varchar nombres
+        varchar apellidos
+        varchar documento_identidad
+        varchar profesion
+        varchar tipo_documento
+        varchar telefono
+        varchar correo_electronico
+    }
+    
+    ACUDIENTE {
+        int id_acudiente PK
+        varchar nombres
+        varchar apellidos
+        varchar documento_identidad
+        varchar tipo_documento
+        varchar telefono
+        varchar direccion
+        varchar correo_electronico
+    }
+    
+    ESTUDIANTE_ACUDIENTE {
+        int id_estudiante PK,FK
+        int id_acudiente PK,FK
+        varchar parentesco
+        boolean es_principal
+    }
+    
+    ASIGNATURA {
+        int id_asignatura PK
+        varchar nombre
+        int intensidad_horaria
+    }
+    
+    ANIO_LECTIVO {
+        int id_anio_lectivo PK
+        int anio
+        date fecha_inicio
+        date fecha_fin
+        varchar estado
+    }
+    
+    PERIODO {
+        int id_periodo PK
+        varchar nombre
+        date fecha_inicio
+        date fecha_fin
+        int id_anio_lectivo FK
+    }
+    
+    GRADO_ASIGNATURA {
+        int id_grado PK,FK
+        int id_asignatura PK,FK
+    }
+    
+    MATRICULA {
+        int id_matricula PK
+        int id_estudiante FK
+        int id_grupo FK
+        date fecha_matricula
+        varchar estado
+        int id_anio_lectivo FK
+    }
+    
+    CARGA_ACADEMICA {
+        int id_carga PK
+        int id_docente FK
+        int id_grupo FK
+        int id_asignatura FK
+        int id_anio_lectivo FK
+    }
+    
+    TIPO_EVALUACION {
+        int id_tipo_evaluacion PK
+        varchar nombre
+        varchar descripcion
+    }
+    
+    EVALUACION {
+        int id_evaluacion PK
+        int id_carga_academica FK
+        int id_periodo FK
+        int id_tipo_evaluacion FK
+        varchar nombre
+        text descripcion
+        date fecha_presentacion
+        int id_logro FK
+    }
+    
+    PREGUNTA {
+        int id_pregunta PK
+        int id_evaluacion FK
+        varchar enunciado
+        varchar tipo
+        numeric peso
+    }
+    
+    OPCION_RESPUESTA {
+        int id_opcion PK
+        int id_pregunta FK
+        varchar texto
+        boolean es_correcta
+    }
+    
+    CALIFICACION {
+        int id_calificacion PK
+        int id_evaluacion FK
+        int id_matricula FK
+        numeric nota
+        varchar observaciones
+        timestamp fecha_calificacion
+    }
+    
+    RESPUESTA_ESTUDIANTE {
+        int id_respuesta PK
+        int id_pregunta FK
+        int id_calificacion FK
+        varchar respuesta
+        numeric puntaje_obtenido
+        int id_opcion_seleccionada FK
+    }
+    
+    ACTIVIDAD_RECUPERACION {
+        int id_recuperacion PK
+        int id_calificacion FK
+        date fecha
+        text descripcion
+        numeric nota_recuperacion
+        timestamp fecha_calificacion
+    }
+    
+    COMPETENCIA {
+        int id_competencia PK
+        varchar nombre
+        text descripcion
+        int id_asignatura FK
+        int id_grado FK
+    }
+    
+    LOGRO {
+        int id_logro PK
+        text descripcion
+        int id_competencia FK
+        int id_periodo FK
+        numeric porcentaje
+    }
+    
+    ASISTENCIA {
+        int id_asistencia PK
+        int id_matricula FK
+        date fecha
+        varchar estado
+        varchar observaciones
+        timestamp fecha_registro
+    }
+    
+    OBSERVACION_COMPORTAMIENTO {
+        int id_observacion PK
+        int id_matricula FK
+        int id_docente_observador FK
+        int id_carga_academica FK
+        timestamp fecha_hora
+        text descripcion
+        varchar tipo_observacion
+        varchar acciones_tomadas
+    }
+    
+    DEPARTAMENTO {
+        int id_departamento PK
+        varchar nombre
+        varchar codigo
+    }
+    
+    MUNICIPIO {
+        int id_municipio PK
+        varchar nombre
+        varchar codigo
+        int id_departamento FK
+    }
+    
+    DIA_SEMANA {
+        int id_dia PK
+        varchar nombre
+        smallint codigo
+    }
+    
+    HORARIO {
+        int id_horario PK
+        int id_carga_academica FK
+        smallint id_dia FK
+        time hora_inicio
+        time hora_fin
+    }
+    
+    ARCHIVO_DIGITAL {
+        int id_archivo PK
+        varchar tipo_archivo
+        varchar nombre_archivo
+        varchar ruta_almacenamiento
+        varchar mime_type
+        timestamp fecha_carga
+        int id_usuario_carga FK
+        varchar entidad_relacionada
+        int id_entidad
+    }
+    
+    USUARIOS {
+        int id_usuario PK
+        varchar nombre_usuario
+        varchar clave
+        int id_docente FK
+        int id_estudiante FK
+        boolean activo
+        varchar salt
+        int id_rol FK
+    }
+    
+    MODULO {
+        int id_modulo PK
+        varchar nombre
+        varchar descripcion
+        varchar codigo
+    }
+    
+    PERMISO {
+        int id_permiso PK
+        varchar nombre
+        varchar descripcion
+        varchar codigo
+        int id_modulo FK
+    }
+    
+    ROL {
+        int id_rol PK
+        varchar nombre
+        varchar descripcion
+        boolean es_rol_sistema
+    }
+    
+    ROL_PERMISO {
+        int id_rol PK,FK
+        int id_permiso PK,FK
+    }
+
+    %% Relaciones
+    INSTITUCION ||--o{ SEDE : tiene
+    SEDE }|--o{ GRUPO : contiene
+    GRADO ||--o{ GRUPO : clasifica
+    JORNADA ||--o{ GRUPO : define
+    
+    ESTUDIANTE ||--o{ MATRICULA : se_registra_en
+    GRUPO ||--o{ MATRICULA : incluye
+    ANIO_LECTIVO ||--o{ MATRICULA : corresponde_a
+    MATRICULA ||--o{ CALIFICACION : recibe
+    MATRICULA ||--o{ ASISTENCIA : registra
+    MATRICULA ||--o{ OBSERVACION_COMPORTAMIENTO : tiene
+    
+    ESTUDIANTE }o--o{ ACUDIENTE : tiene_como_acudiente
+    
+    DOCENTE ||--o{ CARGA_ACADEMICA : es_asignado_a
+    GRUPO ||--o{ CARGA_ACADEMICA : es_asignado
+    ASIGNATURA ||--o{ CARGA_ACADEMICA : es_parte_de
+    ANIO_LECTIVO ||--o{ CARGA_ACADEMICA : ocurre_en
+    
+    GRADO }o--o{ ASIGNATURA : incluye
+    
+    ANIO_LECTIVO ||--o{ PERIODO : se_divide_en
+    
+    ASIGNATURA ||--o{ COMPETENCIA : tiene
+    GRADO ||--o{ COMPETENCIA : define
+    COMPETENCIA ||--o{ LOGRO : establece
+    PERIODO ||--o{ LOGRO : evalua_en
+    
+    CARGA_ACADEMICA ||--o{ EVALUACION : programa
+    PERIODO ||--o{ EVALUACION : pertenece_a
+    TIPO_EVALUACION ||--o{ EVALUACION : clasifica
+    LOGRO ||--o{ EVALUACION : mide
+    
+    EVALUACION ||--o{ PREGUNTA : compuesta_por
+    PREGUNTA ||--o{ OPCION_RESPUESTA : contiene
+    
+    EVALUACION ||--o{ CALIFICACION : genera
+    CALIFICACION ||--o{ RESPUESTA_ESTUDIANTE : registra
+    PREGUNTA ||--o{ RESPUESTA_ESTUDIANTE : responde
+    OPCION_RESPUESTA ||--o{ RESPUESTA_ESTUDIANTE : selecciona
+    
+    CALIFICACION ||--o{ ACTIVIDAD_RECUPERACION : puede_tener
+    
+    CARGA_ACADEMICA ||--o{ HORARIO : programa
+    DIA_SEMANA ||--o{ HORARIO : ocurre_en
+    
+    DEPARTAMENTO ||--o{ MUNICIPIO : contiene
+    MUNICIPIO ||--o{ ESTUDIANTE : reside_en
+    MUNICIPIO ||--o{ SEDE : ubicada_en
+    
+    DOCENTE ||--o{ OBSERVACION_COMPORTAMIENTO : registra
+    
+    MODULO ||--o{ PERMISO : agrupa
+    ROL }o--o{ PERMISO : tiene_asignado
+    
+    ROL ||--o{ USUARIOS : tiene_rol
+    ESTUDIANTE |o--o| USUARIOS : puede_tener
+    DOCENTE |o--o| USUARIOS : puede_tener
+    USUARIOS ||--o{ ARCHIVO_DIGITAL : carga
+    </script>
+
+    <!-- Script Principal -->
+    <script>
+        let panZoomInstance = null;
+
+        const categories = [
+            {
+                name: "Institucional",
+                icon: "building-2",
+                tables: ["INSTITUCION", "SEDE", "JORNADA", "GRADO", "GRUPO"]
+            },
+            {
+                name: "Personas",
+                icon: "users",
+                tables: ["ESTUDIANTE", "DOCENTE", "ACUDIENTE", "ESTUDIANTE_ACUDIENTE"]
+            },
+            {
+                name: "Gestión Académica",
+                icon: "book-open",
+                tables: ["ASIGNATURA", "ANIO_LECTIVO", "PERIODO", "GRADO_ASIGNATURA", "MATRICULA", "CARGA_ACADEMICA"]
+            },
+            {
+                name: "Evaluaciones & Notas",
+                icon: "file-check",
+                tables: ["TIPO_EVALUACION", "EVALUACION", "PREGUNTA", "OPCION_RESPUESTA", "CALIFICACION", "RESPUESTA_ESTUDIANTE", "ACTIVIDAD_RECUPERACION"]
+            },
+            {
+                name: "Competencias & Logros",
+                icon: "award",
+                tables: ["COMPETENCIA", "LOGRO"]
+            },
+            {
+                name: "Asistencia & Conducta",
+                icon: "clipboard-list",
+                tables: ["ASISTENCIA", "OBSERVACION_COMPORTAMIENTO"]
+            },
+            {
+                name: "Ubicación & Horarios",
+                icon: "map-pin",
+                tables: ["DEPARTAMENTO", "MUNICIPIO", "DIA_SEMANA", "HORARIO"]
+            },
+            {
+                name: "Seguridad & Sistema",
+                icon: "shield-check",
+                tables: ["USUARIOS", "MODULO", "PERMISO", "ROL", "ROL_PERMISO", "ARCHIVO_DIGITAL"]
+            }
+        ];
+
+        // Configuración de Mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            securityLevel: 'loose',
+            er: {
+                useMaxWidth: false,
+                layoutDirection: 'TB',
+                minEntityWidth: 160,
+                minEntityHeight: 70,
+                entityPadding: 15
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            // Inicializar Lucide Icons
+            lucide.createIcons();
+
+            // Llenar la barra lateral
+            populateSidebar();
+
+            // Renderizar Mermaid
+            const mermaidCode = document.getElementById("mermaid-code").textContent;
+            const target = document.getElementById("mermaid-target");
+
+            try {
+                const { svg } = await mermaid.render("er-svg-container", mermaidCode);
+                target.innerHTML = svg;
+
+                const svgElement = target.querySelector("svg");
+                svgElement.setAttribute("id", "er-svg");
+                
+                // Ocultar Loader y mostrar contenedor
+                document.getElementById("loader").classList.add("hidden");
+                const wrapper = document.getElementById("diagram-wrapper");
+                wrapper.classList.remove("opacity-0");
+
+                // Configurar Pan & Zoom
+                panZoomInstance = svgPanZoom("#er-svg", {
+                    zoomEnabled: true,
+                    controlIconsEnabled: false,
+                    fit: true,
+                    center: true,
+                    minZoom: 0.1,
+                    maxZoom: 10,
+                    zoomScaleSensitivity: 0.2
+                });
+
+                window.addEventListener("resize", () => {
+                    if (panZoomInstance) {
+                        panZoomInstance.resize();
+                        panZoomInstance.fit();
+                        panZoomInstance.center();
+                    }
+                });
+
+            } catch (err) {
+                console.error("Error al renderizar Mermaid:", err);
+                document.getElementById("loader").innerHTML = `
+                    <div class="text-red-400 text-center px-4">
+                        <p class="font-semibold text-sm">Error al generar el diagrama</p>
+                        <p class="text-xs text-red-300 mt-1">${err.message || 'Error de sintaxis o renderizado en Mermaid.'}</p>
+                    </div>
+                `;
+            }
+
+            // Controles de zoom
+            document.getElementById("btn-zoom-in").addEventListener("click", () => panZoomInstance && panZoomInstance.zoomIn());
+            document.getElementById("btn-zoom-out").addEventListener("click", () => panZoomInstance && panZoomInstance.zoomOut());
+            document.getElementById("btn-zoom-reset").addEventListener("click", () => {
+                if (panZoomInstance) {
+                    panZoomInstance.resetZoom();
+                    panZoomInstance.fit();
+                    panZoomInstance.center();
+                }
+            });
+
+            // Exportar SVG
+            document.getElementById("btn-export-svg").addEventListener("click", downloadSVG);
+
+            // Toggle Sidebar Móvil
+            const sidebar = document.getElementById("sidebar");
+            document.getElementById("btn-toggle-sidebar").addEventListener("click", () => {
+                sidebar.classList.toggle("-translate-x-full");
+            });
+
+            const closeSidebarBtn = document.getElementById("btn-close-sidebar");
+            if (closeSidebarBtn) {
+                closeSidebarBtn.addEventListener("click", () => {
+                    sidebar.classList.add("-translate-x-full");
+                });
+            }
+
+            // Buscador
+            document.getElementById("table-search").addEventListener("input", filterSidebarTables);
+        });
+
+        function populateSidebar() {
+            const container = document.getElementById("categories-container");
+            let totalCount = 0;
+
+            categories.forEach((cat, index) => {
+                totalCount += cat.tables.length;
+
+                const section = document.createElement("div");
+                section.className = "category-group space-y-1";
+
+                const categoryHeader = `
+                    <button class="w-full flex items-center justify-between p-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200 transition rounded" onclick="toggleCategory('cat-${index}')">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 text-brand-400"></i>
+                            ${cat.name}
+                        </span>
+                        <span class="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded-full border border-slate-700/60">${cat.tables.length}</span>
+                    </button>
+                `;
+
+                const tableList = document.createElement("div");
+                tableList.id = `cat-${index}`;
+                tableList.className = "pl-4 space-y-0.5 text-xs";
+
+                cat.tables.forEach(tableName => {
+                    const btn = document.createElement("button");
+                    btn.className = "table-btn w-full text-left py-1 px-2 rounded text-slate-300 hover:bg-slate-800 hover:text-brand-300 transition flex items-center justify-between group";
+                    btn.setAttribute("data-table", tableName);
+                    btn.innerHTML = `
+                        <span class="font-mono text-[11px]">${tableName}</span>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-slate-600 group-hover:text-brand-400 opacity-0 group-hover:opacity-100 transition"></i>
+                    `;
+                    btn.onclick = () => focusTable(tableName);
+                    tableList.appendChild(btn);
+                });
+
+                section.innerHTML = categoryHeader;
+                section.appendChild(tableList);
+                container.appendChild(section);
+            });
+
+            document.getElementById("total-entities").textContent = totalCount;
+            lucide.createIcons();
+        }
+
+        function toggleCategory(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle("hidden");
+        }
+
+        function filterSidebarTables(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const tableButtons = document.querySelectorAll(".table-btn");
+
+            tableButtons.forEach(btn => {
+                const name = btn.getAttribute("data-table").toLowerCase();
+                if (name.includes(query)) {
+                    btn.style.display = "flex";
+                } else {
+                    btn.style.display = "none";
+                }
+            });
+        }
+
+        function focusTable(tableName) {
+            const svg = document.getElementById("er-svg");
+            if (!svg || !panZoomInstance) return;
+
+            const allGroups = svg.querySelectorAll("g");
+            let targetGroup = null;
+
+            allGroups.forEach(g => {
+                const textEl = g.querySelector("text, tspan");
+                if (textEl && textEl.textContent.trim().toUpperCase() === tableName.toUpperCase()) {
+                    targetGroup = g.closest(".entityBox") || g;
+                }
+            });
+
+            if (targetGroup) {
+                const rect = targetGroup.querySelector("rect");
+                if (rect) {
+                    const originalStroke = rect.getAttribute("stroke");
+                    rect.setAttribute("stroke", "#38bdf8");
+                    rect.setAttribute("stroke-width", "4");
+
+                    setTimeout(() => {
+                        rect.setAttribute("stroke", originalStroke || "#38bdf8");
+                        rect.setAttribute("stroke-width", "2");
+                    }, 2500);
+                }
+
+                // Cerrar sidebar en móvil tras seleccionar
+                if (window.innerWidth < 768) {
+                    document.getElementById("sidebar").classList.add("-translate-x-full");
+                }
+            }
+        }
+
+        function downloadSVG() {
+            const svg = document.getElementById("er-svg");
+            if (!svg) return;
+
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+
+            const downloadLink = document.createElement("a");
+            downloadLink.href = url;
+            downloadLink.download = "diagrama_entidad_relacion_academico.svg";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
